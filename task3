@@ -1,0 +1,70 @@
+import tkinter as tk
+from tkinter import messagebox
+import requests
+from bs4 import BeautifulSoup
+
+# Function to fetch lyrics using web scraping
+def get_lyrics(song_name):
+    # Format the song name for the search query
+    search_url = f"https://genius.com/search?q={song_name.replace(' ', '%20')}"
+    
+    # Request search results
+    response = requests.get(search_url)
+    
+    # Parse the HTML response with BeautifulSoup
+    soup = BeautifulSoup(response.text, 'html.parser')
+    
+    # Find the URL of the song lyrics page from the search result
+    song_url = soup.find('a', {'class': 'mini_card'})['href']
+    song_page_url = "https://genius.com" + song_url
+    
+    # Fetch the actual lyrics page
+    song_response = requests.get(song_page_url)
+    song_soup = BeautifulSoup(song_response.text, 'html.parser')
+    
+    # Find and extract the lyrics section
+    lyrics = song_soup.find('div', {'class': 'lyrics'}).get_text()
+    
+    return lyrics.strip()
+
+# Create the GUI application
+class LyricsApp:
+    def _init_(self, root):
+        self.root = root
+        self.root.title("Song Lyrics Finder")
+        self.root.geometry("500x400")
+        
+        # Title label
+        self.title_label = tk.Label(self.root, text="Enter Song Title", font=("Helvetica", 16))
+        self.title_label.pack(pady=20)
+
+        # Entry widget for song title
+        self.song_entry = tk.Entry(self.root, font=("Helvetica", 14), width=40)
+        self.song_entry.pack(pady=10)
+
+        # Button to fetch lyrics
+        self.search_button = tk.Button(self.root, text="Get Lyrics", font=("Helvetica", 14), command=self.get_song_lyrics)
+        self.search_button.pack(pady=10)
+
+        # Text widget to display lyrics
+        self.lyrics_display = tk.Text(self.root, font=("Helvetica", 12), wrap=tk.WORD, height=10, width=50)
+        self.lyrics_display.pack(pady=20)
+
+    def get_song_lyrics(self):
+        song_name = self.song_entry.get()
+        if not song_name:
+            messagebox.showerror("Error", "Please enter a song title")
+            return
+        
+        try:
+            lyrics = get_lyrics(song_name)
+            self.lyrics_display.delete(1.0, tk.END)  # Clear previous lyrics
+            self.lyrics_display.insert(tk.END, lyrics)  # Display the fetched lyrics
+        except Exception as e:
+            messagebox.showerror("Error", f"An error occurred: {str(e)}")
+
+# Running the application
+if _name_ == "_main_":
+    root = tk.Tk()
+    app = LyricsApp(root)
+    root.mainloop()
